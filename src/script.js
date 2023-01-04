@@ -14,9 +14,7 @@ const parameters = {
 gui
     .addColor(parameters, 'materialColor')
 
-/**
- * Base
- */
+
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
 
