@@ -3,11 +3,16 @@
     border: red 1px solid;
 }
 
+html {
+    background: #1e1a20;
+}
+
 html,
 body
 {
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 .webgl
@@ -34,8 +39,4 @@ body
 
 }
 
-section:nth-child(odd)
-{
-    justify-content: flex-end;
-}
 
