@@ -4,41 +4,65 @@ import * as dat from 'lil-gui'
 import * as Stats from 'stats-js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 // import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 
-const canvas        = document.querySelector('canvas.webgl')
-const scene         = new THREE.Scene()
-const gui           = new dat.GUI()
-const stats         = new Stats()
-const clock         = new THREE.Clock()
-const renderer      = new THREE.WebGLRenderer({ canvas: canvas })
-const camera        = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100)
-const controls      = new OrbitControls(camera, canvas)
-const gltfLoader    = new GLTFLoader()
+let loading_switch      = false;
+const canvas            = document.querySelector('canvas.webgl')
+const loading_manager   = new THREE.LoadingManager();
+const scene             = new THREE.Scene()
+const gui               = new dat.GUI()
+const stats             = new Stats()
+const clock             = new THREE.Clock()
+const renderer          = new THREE.WebGLRenderer({ canvas: canvas, antialias: true })
+const camera            = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 100);
+const controls          = new OrbitControls(camera, canvas)
+const gltfLoader        = new GLTFLoader(loading_manager)
+const fbxLoader         = new FBXLoader(loading_manager)
+
+
 // const dracoLoader   = new DRACOLoader()
-const textureLoader = new THREE.TextureLoader()
+const textureLoader = new THREE.TextureLoader(loading_manager)
 
 const sizes         = { width: window.innerWidth, height: window.innerHeight }
 const cursor        = { x: 0, y: 0 }
 let scrollY         = null;
 
+loading_manager.onLoad = function (url, loaded_items, total_items) {
+    console.log("All items loaded successfully.")
+    loading_switch = true;
+}
+
 // Gradients
-const bowl_gradient         = textureLoader.load('Model Resources/Toon Style Gradients/Bowl-Gradient.jpg')
-const grey_gradient         = textureLoader.load('Model Resources/Toon Style Gradients/Grey-Outline-Gradient.jpg')
-bowl_gradient.magFilter     = THREE.NearestFilter
-grey_gradient.magFilter     = THREE.NearestFilter
+const bowl_gradient         = textureLoader.load('Model Resources/Toon Style Gradients/Bowl-Gradient.jpg');
+const grey_gradient         = textureLoader.load('Model Resources/Toon Style Gradients/Grey-Outline-Gradient.jpg');
+const chive_gradient        = textureLoader.load('Model Resources/Toon Style Gradients/Chive-Gradient.jpg');
+const noodle_gradient       = textureLoader.load('Model Resources/Toon Style Gradients/Noodle-Gradient.jpg');
+bowl_gradient.magFilter     = THREE.NearestFilter;
+grey_gradient.magFilter     = THREE.NearestFilter;
+chive_gradient.magFilter    = THREE.NearestFilter;
+noodle_gradient.magFilter   = THREE.NearestFilter;
 
 // Toon Materials
-const bowl_toon_material    = new THREE.MeshToonMaterial({ gradientMap: bowl_gradient })
-const grey_outline_toon     = new THREE.MeshToonMaterial({ gradientMap: grey_gradient })
+const bowl_toon_material    = new THREE.MeshToonMaterial({ gradientMap: bowl_gradient });
+const chive_toon_material   = new THREE.MeshToonMaterial({ gradientMap: chive_gradient });
+const noodle_toon_material  = new THREE.MeshToonMaterial({ gradientMap: noodle_gradient });
+const grey_outline_toon     = new THREE.MeshToonMaterial({ gradientMap: grey_gradient }); // Experimental Material
+
 
 // Textures
-const bowl_texture          = textureLoader.load('Model Resources/Model Textures/ultrawide-bowl-texture-2262.png')
+const bowl_texture          = textureLoader.load('Model Resources/Model Textures/ultrawide-bowl-texture-2262.png');
+const corn_texture          = textureLoader.load('Model Resources/Model Textures/corn-texture-1024.jpg');
+const sushi_texture         = textureLoader.load('Model Resources/Model Textures/sushi-texture-1024.jpg');
 
-bowl_texture.flipY          = false
+bowl_texture.flipY          = false;
+corn_texture.flipY          = false;
+sushi_texture.flipY         = false;
 
 // Materials
-const bowl_texture_material = new THREE.MeshBasicMaterial({ map: bowl_texture })
+const bowl_texture_material     = new THREE.MeshBasicMaterial({ map: bowl_texture });
+const corn_texture_material     = new THREE.MeshBasicMaterial({ map: corn_texture });
+const sushi_texture_material    = new THREE.MeshBasicMaterial({ map: sushi_texture });
 
 
 stats.showPanel( 1 )
@@ -57,31 +81,42 @@ controls.enableDamping = true;
 
 
 const axesHelper                    = new THREE.AxesHelper(10)
-const directionalLight              = new THREE.DirectionalLight('#ffffff', 0.5);
+const directionalLight              = new THREE.DirectionalLight('#f2e9e9', 0.5);
 const directionalLightHelper        = new THREE.DirectionalLightHelper(directionalLight, 5);
-directionalLight.position.set(0,10,0);
+directionalLight.position.set(0,15,0);
 scene.add(axesHelper, directionalLight, directionalLightHelper)
 
 
-gltfLoader.load('Model Resources/Bowl.glb', (gltf => {
-    const bowl_shell_mesh       = gltf.scene.children.find(child => child.name === 'High_Res_Bowl_1');
-    const bowl_texture_mesh     = gltf.scene.children.find(child => child.name === 'High_Res_Bowl_2');
-    const black_outline         = gltf.scene.children.find(child => child.name === 'High_Res_Bowl_Outline_Black');
-    const grey_outline          = gltf.scene.children.find(child => child.name === 'High_Res_Bowl_Outline_Grey');
+let noodlesMixer;
+let animations = {
+    noodle: null,
+};
 
-    bowl_shell_mesh.material    = bowl_toon_material;
-    bowl_texture_mesh.material  = bowl_texture_material;
-    black_outline.material      = new THREE.MeshBasicMaterial({ color: '#000000' });
-    grey_outline.material       = grey_outline_toon
 
-    console.log(gltf.scene)
+// gltfLoader.load('GLTF Models/noodles-animation-optimized-smooth.glb', (gltf) => {
+//     noodlesMixer = new THREE.AnimationMixer(gltf.scene.children[0].children[20])
+//     let noodle_animation = noodlesMixer.clipAction(gltf.animations[0])
+//     console.log(animations.noodle)
+//     noodle_animation.play()
+
+//     gltf.scene.children[0].children[20].material = noodle_toon_material;
+//     scene.add(gltf.scene)
+
+// })
+
+gltfLoader.load('GLTF Models/temp.glb', (gltf => {
+    console.log(gltf)
+    noodlesMixer = new THREE.AnimationMixer(gltf.scene.children[1])
+    console.log(gltf.animations[0])
+    // let noodle_animation = noodlesMixer.clipAction(gltf.animations[0])
+    // noodle_animation.play()
     scene.add(gltf.scene)
-
 }))
 
-
-// const cube = new THREE.Mesh( new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: '#ff0000' }) )
-// scene.add(cube)
+// fbxLoader.load('GLTF Models/temp-2.fbx', (fbx) => {
+//     scene.add(fbx)
+//     console.log(fbx)
+// })
 
 
 
@@ -110,7 +145,8 @@ window.addEventListener('mousemove', (e) => {
    cursor.y = e.clientY / sizes.height - 0.5;
 })
 
-camera.position.z = 6
+camera.position.set(41.3, -0.5, 34.8)
+
 scene.add(camera)
 
 
@@ -121,6 +157,11 @@ const tick = () =>
 
     renderer.render(scene, camera)
     controls.update()
+    
+
+    if (loading_switch) {
+       noodlesMixer.update(clock.getDelta())
+    }
 
     stats.end()
 
