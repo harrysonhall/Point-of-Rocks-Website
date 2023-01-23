@@ -81,42 +81,34 @@ controls.enableDamping = true;
 
 
 const axesHelper                    = new THREE.AxesHelper(10)
-const directionalLight              = new THREE.DirectionalLight('#f2e9e9', 0.5);
+const directionalLight              = new THREE.DirectionalLight('#f2e9e9', 1);
 const directionalLightHelper        = new THREE.DirectionalLightHelper(directionalLight, 5);
 directionalLight.position.set(0,15,0);
 scene.add(axesHelper, directionalLight, directionalLightHelper)
 
 
 let noodlesMixer;
-let animations = {
+let animation = {
     noodle: null,
-};
+    time: 0,
+}
 
 
-// gltfLoader.load('GLTF Models/noodles-animation-optimized-smooth.glb', (gltf) => {
-//     noodlesMixer = new THREE.AnimationMixer(gltf.scene.children[0].children[20])
-//     let noodle_animation = noodlesMixer.clipAction(gltf.animations[0])
-//     console.log(animations.noodle)
-//     noodle_animation.play()
-
-//     gltf.scene.children[0].children[20].material = noodle_toon_material;
-//     scene.add(gltf.scene)
-
-// })
-
-gltfLoader.load('GLTF Models/temp.glb', (gltf => {
+gltfLoader.load('GLTF Models/noodle-test-2.glb', (gltf => {
     console.log(gltf)
-    noodlesMixer = new THREE.AnimationMixer(gltf.scene.children[1])
-    console.log(gltf.animations[0])
-    // let noodle_animation = noodlesMixer.clipAction(gltf.animations[0])
-    // noodle_animation.play()
+    gltf.scene.children[0].children[188].material = noodle_toon_material
     scene.add(gltf.scene)
+    noodlesMixer            = new THREE.AnimationMixer(gltf.scene.children[0].children[188])
+    animation.noodle        = noodlesMixer.clipAction(gltf.animations[0])
+    gui.add(animation, 'time').min(0).max(8.291666984558105).enable(true).listen(true)
+    animation.noodle.play()
+
+    console.log(animation.noodle)
+    console.log(gltf.animations)
+    
 }))
 
-// fbxLoader.load('GLTF Models/temp-2.fbx', (fbx) => {
-//     scene.add(fbx)
-//     console.log(fbx)
-// })
+
 
 
 
